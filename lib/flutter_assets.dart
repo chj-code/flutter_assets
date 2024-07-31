@@ -3,71 +3,81 @@ library flutter_assets;
 import 'dart:io';
 
 class FlutterAssets {
-  /// 前缀设置
+  /// prefix
   static const String dirStr = "  /// directory: ";
   static const String startStr = "  static const ";
+  static const String dividerStr =
+      "\n--------------------------------------------------------------------------------------------\n\n";
 
-  static refresh() async {
-    /// 项目图片资源目录
-    String imagePath = "${Uri.base.path}assets/images/";
+  static refreshImages({
+    String projectPath = "",
+    String imagePath = "assets/images",
+    String codePath = "lib/app_res",
+    String codeName = "app_image",
+    String className = "AppImages",
+    int maxLineLength = 80,
+  }) async {
+    // path
+    if (projectPath.isEmpty) projectPath = Directory.current.path;
+    if (className.isEmpty) className = "AppImages";
+    String imageUri = "$projectPath/$imagePath";
+    String resPath = "$projectPath/$codePath/$codeName.dart";
 
-    String className = "AppImages";
+    print("ClassName：$className");
+    print("ProjecUri：$projectPath");
+    print("ImageUri：$imageUri");
+    print("CodeUri：$resPath\n$dividerStr");
 
-    /// 项目中引用图片文件的类 文件路径
-    String resPath = "${Uri.base.path}lib/app_res/app_image.dart";
+    // Directory
+    Directory projectDir = Directory(imageUri);
+    Stream<FileSystemEntity> dir = projectDir.list(
+      recursive: true,
+      followLinks: false,
+    );
 
-    Directory projectDir = Directory(imagePath);
-    Stream<FileSystemEntity> dir =
-        projectDir.list(recursive: true, followLinks: false);
+    bool isExist = await projectDir.exists();
+
+    if (isExist == false) {
+      print("❌No image files found, please check the image path.$dividerStr");
+      return;
+    }
 
     List<String> imgPathList = []; // 图片路径集合
     Set<String> imgNameSet = {}; // 图片名称集合
-    String basePath = "assets/images";
+    List<String> repeatImgList = [];
+
+    print("Start reading (开始读取)\n\n");
 
     /// 拼接头部
     StringBuffer sb = StringBuffer();
     sb.write("class $className {\n");
-    sb.write("${startStr}basePath = \"$basePath\";\n\n");
-    // String lastDirName = "";
+    sb.write("${startStr}basePath = \"$imagePath\";\n");
 
-    // 递归子目录
+    /// 递归子目录
     await for (final entity in dir) {
-      String imgPath = entity.path.split("/images/").last;
-      if (imgPath.endsWith("png") ||
-          imgPath.endsWith("PNG") ||
-          imgPath.endsWith("jpg") ||
-          imgPath.endsWith("JPG") ||
-          imgPath.endsWith("gif") ||
-          imgPath.endsWith("GIF") ||
-          imgPath.endsWith("jpeg") ||
-          imgPath.endsWith("JPEG") ||
-          imgPath.endsWith("json")) {
-        String imgName = imgPath.split("/").last.split(".").first;
-        imgName = convertToCamelCase(imgName);
+      if (entity is! File) continue;
+      String imgPath = entity.path.split("$imagePath/").last;
+      String imgName = imgPath.split("/").last.split(".").first;
+      imgName = convertToCamelCase(imgName);
 
-        if (imgNameSet.contains(imgName)) {
-          print("图片命重复：$imgPath");
-          continue;
-        } else {
-          if (imgPath.split("/").length > 1) {
-            String firstDirName = imgPath.split("/").first;
-            String noteDirName = dirStr + imgPath.split("/").first;
-            if (!imgNameSet.contains(firstDirName)) {
-              imgNameSet.add(firstDirName); // 记录目录注释名称(去重)
-              imgPathList.add(noteDirName); // 添加目录注释
-            }
+      if (imgNameSet.contains(imgName)) {
+        repeatImgList.add(imgPath);
+        continue;
+      } else {
+        if (imgPath.split("/").length > 1) {
+          String firstDirName = imgPath.split("/").first;
+          String noteDirName = dirStr + imgPath.split("/").first;
+          if (!imgNameSet.contains(firstDirName)) {
+            imgNameSet.add(firstDirName); // 记录目录注释名称(去重)
+            imgPathList.add(noteDirName); // 添加目录注释
           }
-
-          String imgStr = "$startStr$imgName = \"\$basePath/$imgPath\";";
-
-          /// 一行超过80个字符从等号处换行
-          if (imgStr.length > 80) {
-            // 代码格式化占两个空格
-            imgStr = "$startStr$imgName =\n      \"\$basePath/$imgPath\";";
-          }
-          imgNameSet.add(imgName); // 记录图片名称(去重)
-          imgPathList.add(imgStr); // 添加图片路径
         }
+        String imgStr = "$startStr$imgName = \"\$basePath/$imgPath\";";
+        if (imgStr.length > maxLineLength) {
+          imgStr = "$startStr$imgName =\n      \"\$basePath/$imgPath\";";
+        }
+        imgNameSet.add(imgName);
+        imgPathList.add(imgStr);
       }
     }
 
@@ -81,12 +91,41 @@ class FlutterAssets {
 
     /// 拼接尾部
     sb.write("}");
-
-    // print(sb.toString());
-
+    print("Read success (读取成功)\n\n");
     var appImagesFile = File(resPath);
+    bool isExistFile = await appImagesFile.exists();
+    if (isExistFile == false) {
+      print("Start create file $codeName.dart (创建dart文件)\n\n");
+      await appImagesFile.create(recursive: true);
+      print("Create file success (文件创建成功)\n\n");
+    } else {
+      /// 对比文件内容
+      var oldFileString = await appImagesFile.readAsString();
+      var oldLines = oldFileString.split("\n");
+      var newLines = sb.toString().split("\n");
+      final oldSet = Set<String>.from(oldLines);
+      final newSet = Set<String>.from(newLines);
+      final addedLines = newSet.difference(oldSet);
+
+      if (addedLines.isNotEmpty) {
+        print('🟢 Newly added image (新增的图片) 🟢');
+        addedLines.forEach(print);
+        print(dividerStr);
+      }else{
+        print('🟢 No new images added (没有新增的图片) 🟢');
+        print(dividerStr);
+      }
+
+      if (repeatImgList.isNotEmpty) {
+        print('🔴 Repeatedly named images (重复命名的图片) 🔴');
+        repeatImgList.forEach(print);
+        print(dividerStr);
+      }
+    }
+
+    print("Start writing (开始写入)\n\n");
     await appImagesFile.writeAsString(sb.toString());
-    print("\n图片命名写入完成 (共${imgNameSet.length}张)");
+    print("✅ Write success (写入成功) ✅\n$dividerStr\n\n");
   }
 
   /// 下划线转驼峰
