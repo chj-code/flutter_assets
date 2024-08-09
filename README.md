@@ -10,7 +10,7 @@ Help you quickly generate code related to image resources in Flutter development
 
 ```yaml
 dev_dependencies:
-  flutter_assets: ^0.0.1
+  flutter_assets: ^0.0.2
 ```
 
 #### 设置图片路径 (Set image path)   
