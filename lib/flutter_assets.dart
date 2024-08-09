@@ -9,6 +9,12 @@ class FlutterAssets {
   static const String dividerStr =
       "\n--------------------------------------------------------------------------------------------\n\n";
 
+  /// projectPath: 项目路径，自动读取项目根目录
+  /// imagePath: 图片资源存放路径, 默认使用 assets/images
+  /// codePath: 代码生成路径, 默认使用 lib/app_res
+  /// codeName: 代码生成文件名称，默认使用 app_image
+  /// className: 生成的类名，默认使用 AppImages
+  /// maxLineLength: 代码单行最大长度 默认80
   static refreshImages({
     String projectPath = "",
     String imagePath = "assets/images",
@@ -38,7 +44,7 @@ class FlutterAssets {
     bool isExist = await projectDir.exists();
 
     if (isExist == false) {
-      print("❌No image files found, please check the image path.$dividerStr");
+      print("❌ No image files found, please check the image path.$dividerStr");
       return;
     }
 
@@ -46,7 +52,7 @@ class FlutterAssets {
     Set<String> imgNameSet = {}; // 图片名称集合
     List<String> repeatImgList = [];
 
-    print("Start reading (开始读取)\n\n");
+    print("开始读取（Start reading）\n\n");
 
     /// 拼接头部
     StringBuffer sb = StringBuffer();
@@ -91,13 +97,13 @@ class FlutterAssets {
 
     /// 拼接尾部
     sb.write("}");
-    print("Read success (读取成功)\n\n");
+    print("读取成功（Read success）\n\n");
     var appImagesFile = File(resPath);
     bool isExistFile = await appImagesFile.exists();
     if (isExistFile == false) {
-      print("Start create file $codeName.dart (创建dart文件)\n\n");
+      print("创建dart文件$codeName.dart（Create dart file）\n\n");
       await appImagesFile.create(recursive: true);
-      print("Create file success (文件创建成功)\n\n");
+      print("$codeName.dart创建成功（Create success）\n\n");
     } else {
       /// 对比文件内容
       var oldFileString = await appImagesFile.readAsString();
@@ -108,29 +114,32 @@ class FlutterAssets {
       final addedLines = newSet.difference(oldSet);
 
       if (addedLines.isNotEmpty) {
-        print('🟢 Newly added image (新增的图片) 🟢');
+        print('🟢 新增的图片（Newly added image）');
         addedLines.forEach(print);
         print(dividerStr);
-      }else{
-        print('🟢 No new images added (没有新增的图片) 🟢');
+      } else {
+        print('🟢 未新增图片（No new images added）');
         print(dividerStr);
       }
 
       if (repeatImgList.isNotEmpty) {
-        print('🔴 Repeatedly named images (重复命名的图片) 🔴');
+        print('🔴 Repeatedly named images (重复命名的图片) ');
         repeatImgList.forEach(print);
         print(dividerStr);
       }
     }
 
-    print("Start writing (开始写入)\n\n");
+    print("开始写入（Start writing）\n\n");
     await appImagesFile.writeAsString(sb.toString());
-    print("✅ Write success (写入成功) ✅\n$dividerStr\n\n");
+    print("✅ 写入成功（Write success）\n$dividerStr\n\n");
   }
 
   /// 下划线转驼峰
   static String convertToCamelCase(String input) {
-    List<String> words = input.split('_');
+    if (input.contains(" ")) input = input.replaceAll(" ", "_");
+    if (input.contains("-")) input = input.replaceAll("-", "_");
+    List<String> words = [];
+    words = input.split('_');
     String camelCase = '';
     for (int i = 0; i < words.length; i++) {
       String word = words[i];

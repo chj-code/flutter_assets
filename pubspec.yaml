@@ -1,6 +1,6 @@
 name: flutter_assets
-description: "Flutter Assets can help you quickly generate image resource code(可以帮你快速生成图片资源代码)"
-version: 0.0.1
+description: "Flutter Assets can help you quickly generate image resource code in flutter development"
+version: 0.0.2
 homepage: https://github.com/chj-code/flutter_assets
 
 environment:

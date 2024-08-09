@@ -1,20 +1,22 @@
 
 ## Features
 
-帮助你在flutter开发中快速生成图片资源相关代码
-
+帮助你在flutter开发中快速生成图片资源相关代码    
 Help you quickly generate code related to image resources in Flutter development
 
 ## Getting started
 
-在pubspec.yaml文件中添加如下依赖
-
-Add this to your package's pubspec.yaml file:
+#### 在pubspec.yaml文件中添加如下依赖（Add this to your package's pubspec.yaml file:）   
 
 ```yaml
 dev_dependencies:
   flutter_assets: ^0.0.1
 ```
+
+#### 设置图片路径 (Set image path)   
+   
+![picture](jp0.png)
+
 
 ## Usage
 
@@ -46,15 +48,19 @@ void main() {
 Step2：Click the run button in the test.dart file to generate the image resource code
 ![picture](jp1.png)
 
-### Run Successfully （运行成功）
+### 运行成功（Run Successfully）
 ![picture](jp2.png)
+
+### 自动生成文件（Automatically generate files）
+![picture](jp2-1.png)
 
 
 ### 第一次运行成功后，在AndroidStudio顶部工具栏中可以看到RefreshAssets，以后可以直接选择该选项，一键运行
 After the first successful run, you can see RefreshAssets in the top toolbar of AndroidStudio, and you can directly select this option for one-click operation in the future
 ![picture](jp3.png)
 
-
+### 运行成功（Run Successfully）
+![picture](jp4.png)
 
 
 
