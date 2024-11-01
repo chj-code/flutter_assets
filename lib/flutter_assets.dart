@@ -10,11 +10,12 @@ class FlutterAssets {
       "\n--------------------------------------------------------------------------------------------\n\n";
 
   /// projectPath: 项目路径，自动读取项目根目录
-  /// imagePath: 图片资源存放路径, 默认使用 assets/images
+  /// imagePath: 资源资源存放路径, 默认使用 assets/images
   /// codePath: 代码生成路径, 默认使用 lib/app_res
   /// codeName: 代码生成文件名称，默认使用 app_image
   /// className: 生成的类名，默认使用 AppImages
   /// maxLineLength: 代码单行最大长度 默认80
+  /// lengthSort: 是否按名字长短排序 默认false ，按字母排序
   static refreshImages({
     String projectPath = "",
     String imagePath = "assets/images",
@@ -22,6 +23,7 @@ class FlutterAssets {
     String codeName = "app_image",
     String className = "AppImages",
     int maxLineLength = 80,
+    bool sortByLength = false,
   }) async {
     // path
     if (projectPath.isEmpty) projectPath = Directory.current.path;
@@ -48,11 +50,14 @@ class FlutterAssets {
       return;
     }
 
-    List<String> imgPathList = []; // 图片路径集合
-    Set<String> imgNameSet = {}; // 图片名称集合
+    Map<String, List<String>> filePathMap = {
+      'ZZnoDirFileList': [],
+    };
+
+    Set<String> imgNameSet = {}; // 资源名称集合
     List<String> repeatImgList = [];
 
-    print("开始读取（Start reading）\n\n");
+    print("🟣 开始读取（Start reading）\n\n");
 
     /// 拼接头部
     StringBuffer sb = StringBuffer();
@@ -70,68 +75,103 @@ class FlutterAssets {
         repeatImgList.add(imgPath);
         continue;
       } else {
-        if (imgPath.split("/").length > 1) {
-          String firstDirName = imgPath.split("/").first;
-          String noteDirName = dirStr + imgPath.split("/").first;
-          if (!imgNameSet.contains(firstDirName)) {
-            imgNameSet.add(firstDirName); // 记录目录注释名称(去重)
-            imgPathList.add(noteDirName); // 添加目录注释
-          }
-        }
         String imgStr = "$startStr$imgName = \"\$basePath/$imgPath\";";
         if (imgStr.length > maxLineLength) {
           imgStr = "$startStr$imgName =\n      \"\$basePath/$imgPath\";";
         }
-        imgNameSet.add(imgName);
-        imgPathList.add(imgStr);
+        if (imgPath.split("/").length > 1) {
+          String firstDirName = imgPath.split("/").first;
+          // String noteDirName = dirStr + imgPath.split("/").first;
+          if (!imgNameSet.contains(firstDirName)) {
+            imgNameSet.add(firstDirName); // 记录目录注释名称(去重)
+          }
+          if (!filePathMap.keys.contains(firstDirName)) {
+            filePathMap[firstDirName] = [];
+          }
+          imgNameSet.add(imgName);
+          filePathMap[firstDirName]!.add(imgStr);
+        } else {
+          imgNameSet.add(imgName);
+          filePathMap['ZZnoDirFileList']!.add(imgStr);
+        }
       }
     }
 
-    /// 拼接内容
-    for (var element in imgPathList) {
-      if (element.startsWith("  ///")) {
-        sb.writeln();
+    filePathMap.removeWhere((key, value) => value.isEmpty);
+
+    for (var key in filePathMap.keys) {
+      sb.writeln();
+      if (filePathMap[key]!.isNotEmpty) {
+        if (key != 'ZZnoDirFileList') {
+          sb.write("$dirStr$key\n");
+        } else {
+          sb.write("$dirStr$imagePath\n");
+        }
+        if (sortByLength) {
+          filePathMap[key]!
+              .sort((key1, key2) => key1.length.compareTo(key2.length));
+        } else {
+          filePathMap[key]!.sort((key1, key2) => key1
+              .replaceAll(startStr, '')
+              .compareTo(key2.replaceAll(startStr, '')));
+        }
+
+        for (var element in filePathMap[key]!) {
+          sb.write("$element\n");
+        }
       }
-      sb.write("$element\n");
     }
 
     /// 拼接尾部
     sb.write("}");
-    print("读取成功（Read success）\n\n");
+
     var appImagesFile = File(resPath);
     bool isExistFile = await appImagesFile.exists();
+    print("✅ 读取成功（Read success）\n\n");
     if (isExistFile == false) {
-      print("创建dart文件$codeName.dart（Create dart file）\n\n");
+      print("🟣 创建dart文件$codeName.dart（Create dart file）\n\n");
       await appImagesFile.create(recursive: true);
       print("$codeName.dart创建成功（Create success）\n\n");
+
+      print("🟢 开始写入（Start writing）\n\n");
+      await appImagesFile.writeAsString(sb.toString());
+      print("✅ 写入成功（Write success）\n$dividerStr\n");
     } else {
       /// 对比文件内容
       var oldFileString = await appImagesFile.readAsString();
-      var oldLines = oldFileString.split("\n");
-      var newLines = sb.toString().split("\n");
-      final oldSet = Set<String>.from(oldLines);
-      final newSet = Set<String>.from(newLines);
-      final addedLines = newSet.difference(oldSet);
 
-      if (addedLines.isNotEmpty) {
-        print('🟢 新增的图片（Newly added image）');
-        addedLines.forEach(print);
-        print(dividerStr);
+      if (oldFileString != sb.toString()) {
+        var oldLines = oldFileString.split("\n");
+        var newLines = sb.toString().split("\n");
+        final oldSet = Set<String>.from(oldLines);
+        final newSet = Set<String>.from(newLines);
+        final addedLines = newSet.difference(oldSet);
+
+        if (addedLines.isNotEmpty) {
+          print('🟣 资源发生改变（Images changed）');
+          addedLines.forEach(print);
+          print(dividerStr);
+          print("🟢 开始写入（Start writing）\n\n");
+          await appImagesFile.writeAsString(sb.toString());
+          print("✅ 写入成功（Write success）\n$dividerStr\n");
+        } else {
+          print('🟣 资源发生变化（Images changed）');
+          print("🟢 开始写入（Start writing）\n\n");
+          await appImagesFile.writeAsString(sb.toString());
+          print("✅ 写入成功（Write success）\n$dividerStr\n");
+        }
       } else {
-        print('🟢 未新增图片（No new images added）');
+        print('🟢 资源未改变（Unchanged images）');
         print(dividerStr);
       }
 
       if (repeatImgList.isNotEmpty) {
-        print('🔴 Repeatedly named images (重复命名的图片) ');
+        print('🔴 资源重复命名 (Repeatedly named images) ');
         repeatImgList.forEach(print);
         print(dividerStr);
       }
     }
-
-    print("开始写入（Start writing）\n\n");
-    await appImagesFile.writeAsString(sb.toString());
-    print("✅ 写入成功（Write success）\n$dividerStr\n\n");
+    print('✅ 执行成功 （Success）');
   }
 
   /// 下划线转驼峰

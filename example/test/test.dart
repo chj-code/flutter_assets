@@ -3,6 +3,6 @@ import 'package:flutter_assets/flutter_assets.dart';
 
 void main() {
   test('RefreshAssets', () async {
-     await FlutterAssets.refreshImages();
+    await FlutterAssets.refreshImages();
   });
 }

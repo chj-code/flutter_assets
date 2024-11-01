@@ -10,7 +10,7 @@ Help you quickly generate code related to image resources in Flutter development
 
 ```yaml
 dev_dependencies:
-  flutter_assets: ^0.0.2
+  flutter_assets: ^0.0.3
 ```
 
 #### 设置图片路径 (Set image path)   
@@ -32,6 +32,7 @@ void main() {
     /// codeName: 代码生成文件名称，默认使用 app_image
     /// className: 生成的类名，默认使用 AppImages
     /// maxLineLength: 代码单行最大长度
+    /// lengthSort: 是否按名字长短排序 默认false ，按字母排序
     FlutterAssets.refreshImages(
       projectPath: "",
       imagePath: "assets/images",
@@ -39,6 +40,7 @@ void main() {
       codeName: "app_image",
       className: "AppImages",
       maxLineLength: 80,
+      sortByLength: false, 
     );
   });
 }
