@@ -10,7 +10,7 @@ Help you quickly generate code related to image resources in Flutter development
 
 ```yaml
 dev_dependencies:
-  flutter_assets: ^0.0.3
+  flutter_assets: ^0.0.4
 ```
 
 #### 设置图片路径 (Set image path)   
@@ -24,8 +24,8 @@ dev_dependencies:
 Step1：in the test directory, create a test.dart file, and enter the following code:
 
 ```dart
-void main() {
-  test('RefreshAssets', () {
+void main() async {
+  test('RefreshAssets', () async {
     /// projectPath: 项目路径，自动读取项目根目录
     /// imagePath: 图片资源存放路径, 默认 assets/images
     /// codePath: 代码生成路径, 默认使用 lib/app_res
@@ -33,7 +33,7 @@ void main() {
     /// className: 生成的类名，默认使用 AppImages
     /// maxLineLength: 代码单行最大长度
     /// lengthSort: 是否按名字长短排序 默认false ，按字母排序
-    FlutterAssets.refreshImages(
+    await FlutterAssets.refreshImages(
       projectPath: "",
       imagePath: "assets/images",
       codePath: "lib/app_res",

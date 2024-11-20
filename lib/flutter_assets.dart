@@ -31,6 +31,7 @@ class FlutterAssets {
     String imageUri = "$projectPath/$imagePath";
     String resPath = "$projectPath/$codePath/$codeName.dart";
 
+    print("生成资源路径 (assets path)");
     print("ClassName：$className");
     print("ProjecUri：$projectPath");
     print("ImageUri：$imageUri");
@@ -68,31 +69,35 @@ class FlutterAssets {
     await for (final entity in dir) {
       if (entity is! File) continue;
       String imgPath = entity.path.split("$imagePath/").last;
-      String imgName = imgPath.split("/").last.split(".").first;
-      imgName = convertToCamelCase(imgName);
 
-      if (imgNameSet.contains(imgName)) {
-        repeatImgList.add(imgPath);
-        continue;
-      } else {
-        String imgStr = "$startStr$imgName = \"\$basePath/$imgPath\";";
-        if (imgStr.length > maxLineLength) {
-          imgStr = "$startStr$imgName =\n      \"\$basePath/$imgPath\";";
-        }
-        if (imgPath.split("/").length > 1) {
-          String firstDirName = imgPath.split("/").first;
-          // String noteDirName = dirStr + imgPath.split("/").first;
-          if (!imgNameSet.contains(firstDirName)) {
-            imgNameSet.add(firstDirName); // 记录目录注释名称(去重)
+      if (imgPath.split("/").last.split(".").length >= 2) {
+        String imgName = imgPath.split("/").last.split(".").first;
+        imgName = convertToCamelCase(imgName);
+        if (imgName.isNotEmpty) {
+          if (imgNameSet.contains(imgName)) {
+            repeatImgList.add(imgPath);
+            continue;
+          } else {
+            String imgStr = "$startStr$imgName = \"\$basePath/$imgPath\";";
+            if (imgStr.length > maxLineLength) {
+              imgStr = "$startStr$imgName =\n      \"\$basePath/$imgPath\";";
+            }
+            if (imgPath.split("/").length > 1) {
+              String firstDirName = imgPath.split("/").first;
+              // String noteDirName = dirStr + imgPath.split("/").first;
+              if (!imgNameSet.contains(firstDirName)) {
+                imgNameSet.add(firstDirName); // 记录目录注释名称(去重)
+              }
+              if (!filePathMap.keys.contains(firstDirName)) {
+                filePathMap[firstDirName] = [];
+              }
+              imgNameSet.add(imgName);
+              filePathMap[firstDirName]!.add(imgStr);
+            } else {
+              imgNameSet.add(imgName);
+              filePathMap['ZZnoDirFileList']!.add(imgStr);
+            }
           }
-          if (!filePathMap.keys.contains(firstDirName)) {
-            filePathMap[firstDirName] = [];
-          }
-          imgNameSet.add(imgName);
-          filePathMap[firstDirName]!.add(imgStr);
-        } else {
-          imgNameSet.add(imgName);
-          filePathMap['ZZnoDirFileList']!.add(imgStr);
         }
       }
     }
@@ -183,7 +188,7 @@ class FlutterAssets {
     String camelCase = '';
     for (int i = 0; i < words.length; i++) {
       String word = words[i];
-      if (i > 0) {
+      if (i > 0 && word.isNotEmpty) {
         // 首字母大写
         word = word[0].toUpperCase() + word.substring(1);
       }
