@@ -2,28 +2,52 @@ library flutter_assets;
 
 import 'dart:io';
 
+enum UnusedAssetsHandling {
+  /// annotate unused resources code
+  annotation,
+
+  /// move unused resources to the specified folder
+  moveToUnusedFolder,
+
+  ///❗️❗️❗️Delete unused resources, please be careful❗️❗️❗️
+  delete,
+}
+
+/// Assets code generation and management
 class FlutterAssets {
   /// prefix
   static const String dirStr = "  /// directory: ";
   static const String startStr = "  static const ";
   static const String dividerStr =
       "\n--------------------------------------------------------------------------------------------\n\n";
+  static const String unusedAssetsPath = "unused";
 
-  /// projectPath: 项目路径，自动读取项目根目录
-  /// imagePath: 资源资源存放路径, 默认使用 assets/images
-  /// codePath: 代码生成路径, 默认使用 lib/app_res
-  /// codeName: 代码生成文件名称，默认使用 app_image
-  /// className: 生成的类名，默认使用 AppImages
-  /// maxLineLength: 代码单行最大长度 默认80
-  /// lengthSort: 是否按名字长短排序 默认false ，按字母排序
-  static refreshImages({
+  ///
+  /// projectPath: Default auto read project root path
+  ///
+  /// imagePath: Resource file path， Default use：assets/images
+  ///
+  /// codePath:  Code file generation path， Default use：lib/app_res
+  ///
+  /// codeName: Code file generation name， Default use：app_image
+  ///
+  /// className: Generated class name， Default use：AppImages
+  ///
+  /// maxLineLength: Maximum length displayed in a single line of code， Default：200
+  ///
+  /// sortByLength: Sort by name length defaults to false, sort by letter
+  ///
+  /// generateUnused: Generate unused resources, default false
+  ///
+  static refresh({
     String projectPath = "",
     String imagePath = "assets/images",
     String codePath = "lib/app_res",
     String codeName = "app_image",
     String className = "AppImages",
-    int maxLineLength = 80,
+    int maxLineLength = 200,
     bool sortByLength = false,
+    bool generateUnused = false,
   }) async {
     // path
     if (projectPath.isEmpty) projectPath = Directory.current.path;
@@ -31,11 +55,8 @@ class FlutterAssets {
     String imageUri = "$projectPath/$imagePath";
     String resPath = "$projectPath/$codePath/$codeName.dart";
 
-    print("生成资源路径 (assets path)");
-    print("ClassName：$className");
-    print("ProjecUri：$projectPath");
-    print("ImageUri：$imageUri");
-    print("CodeUri：$resPath\n$dividerStr");
+    print(
+        "🔥 assets path info：\n  - ClassName: $className \n  - ImagePath: $imageUri \n  - CodePath:  $resPath \n$dividerStr");
 
     // Directory
     Directory projectDir = Directory(imageUri);
@@ -51,25 +72,25 @@ class FlutterAssets {
       return;
     }
 
-    Map<String, List<String>> filePathMap = {
-      'ZZnoDirFileList': [],
-    };
+    Map<String, List<String>> filePathMap = {'ZZnoDirFileList': []};
 
     Set<String> imgNameSet = {}; // 资源名称集合
     List<String> repeatImgList = [];
 
-    print("🟣 开始读取（Start reading）\n\n");
+    print("🟣 start reading \n\n");
 
-    /// 拼接头部
+    /// Splicing the head together
     StringBuffer sb = StringBuffer();
     sb.write("class $className {\n");
     sb.write("${startStr}basePath = \"$imagePath\";\n");
 
-    /// 递归子目录
+    /// Recurse subdirectories
     await for (final entity in dir) {
       if (entity is! File) continue;
       String imgPath = entity.path.split("$imagePath/").last;
-
+      if (!generateUnused && imgPath.startsWith(unusedAssetsPath)) {
+        continue;
+      }
       if (imgPath.split("/").last.split(".").length >= 2) {
         String imgName = imgPath.split("/").last.split(".").first;
         imgName = convertToCamelCase(imgName);
@@ -127,20 +148,19 @@ class FlutterAssets {
       }
     }
 
-    /// 拼接尾部
     sb.write("}");
 
     var appImagesFile = File(resPath);
     bool isExistFile = await appImagesFile.exists();
-    print("✅ 读取成功（Read success）\n\n");
+    print("✅ read success \n\n");
     if (isExistFile == false) {
-      print("🟣 创建dart文件$codeName.dart（Create dart file）\n\n");
+      print("🟣 create dart file: $codeName.dart \n\n");
       await appImagesFile.create(recursive: true);
-      print("$codeName.dart创建成功（Create success）\n\n");
+      print("✅ $codeName.dart create success \n\n");
 
-      print("🟢 开始写入（Start writing）\n\n");
+      print("🟢 start writing \n\n");
       await appImagesFile.writeAsString(sb.toString());
-      print("✅ 写入成功（Write success）\n$dividerStr\n");
+      print("✅ write success \n$dividerStr\n");
     } else {
       /// 对比文件内容
       var oldFileString = await appImagesFile.readAsString();
@@ -153,33 +173,190 @@ class FlutterAssets {
         final addedLines = newSet.difference(oldSet);
 
         if (addedLines.isNotEmpty) {
-          print('🟣 资源发生改变（Images changed）');
-          addedLines.forEach(print);
+          print('🟣 assets have not changed');
+          for (var element in addedLines) {
+            print("  - $element");
+          }
           print(dividerStr);
-          print("🟢 开始写入（Start writing）\n\n");
+          print("🟢 start writing \n\n");
           await appImagesFile.writeAsString(sb.toString());
-          print("✅ 写入成功（Write success）\n$dividerStr\n");
+          print("✅ write success \n$dividerStr\n");
         } else {
-          print('🟣 资源发生变化（Images changed）');
-          print("🟢 开始写入（Start writing）\n\n");
+          print('🟣 assets changed');
+          print("🟢 start writing \n\n");
           await appImagesFile.writeAsString(sb.toString());
-          print("✅ 写入成功（Write success）\n$dividerStr\n");
+          print("✅ write success \n$dividerStr\n");
         }
       } else {
-        print('🟢 资源未改变（Unchanged images）');
+        print('🟢 assets unchanged');
         print(dividerStr);
       }
 
       if (repeatImgList.isNotEmpty) {
-        print('🔴 资源重复命名 (Repeatedly named images) ');
-        repeatImgList.forEach(print);
+        print('⁉️ duplicate naming of assets');
+        for (var element in repeatImgList) {
+          print("⚠️ -$element");
+        }
         print(dividerStr);
       }
     }
-    print('✅ 执行成功 （Success）');
+    print('✅✅ refresh success ✅✅\n\n------------- end -------------');
   }
 
-  /// 下划线转驼峰
+  ///
+  /// projectPath: Default auto read project root path
+  ///
+  /// imagePath: Resource file path， Default use：assets/images
+  ///
+  /// codePath:  Code file generation path， Default use：lib/app_res
+  ///
+  /// codeName: Code file generation name， Default use：app_image
+  ///
+  /// className: Generated class name， Default use：AppImages
+  ///
+  /// excludedPaths: To exclude unprocessed file paths (relative to the project root directory)  Default use：[]
+  ///
+  static checkUnused({
+    String projectPath = "",
+    String imagePath = "assets/images",
+    String codePath = "lib/app_res",
+    String codeName = "app_image",
+    String className = "AppImages",
+    List<String> excludedPaths = const [],
+    UnusedAssetsHandling unusedAssetsHandling = UnusedAssetsHandling.annotation,
+  }) async {
+    /// 从文件中提取 AppImages 常量
+    Map<String, String> extractAppImagesConstants(String filePath) {
+      final file = File(filePath);
+      if (!file.existsSync()) {
+        print('❗ codeName not found : $filePath');
+        exit(1);
+      }
+
+      final content = file.readAsStringSync();
+      final regex = RegExp(r'static const (\w+)\s*=\s*"\$basePath\/([^"]+)"');
+      final matches = regex.allMatches(content);
+
+      final result = <String, String>{};
+      for (var match in matches) {
+        final name = match.group(1)!;
+        final relativePath = match.group(2)!;
+        final fullPath = '$imagePath/$relativePath';
+        result[name] = fullPath;
+      }
+      return result;
+    }
+
+    /// 要排除的文件路径（相对于项目根目录）
+    final tempExcludedPaths = <String>[
+      '$codePath/$codeName.dart',
+      ...excludedPaths,
+    ];
+
+    final appImagesFilePath = '$codePath/$codeName.dart';
+
+    final imageConstants = extractAppImagesConstants(appImagesFilePath);
+    final usedConstants = <String>{};
+
+    if (unusedAssetsHandling == UnusedAssetsHandling.moveToUnusedFolder) {
+      if (!Directory('$imagePath/$unusedAssetsPath').existsSync()) {
+        Directory('$imagePath/$unusedAssetsPath').createSync(recursive: true);
+      }
+    }
+
+    // 获取 lib 下所有 Dart 文件（排除指定）
+    final dartFiles = Directory('lib')
+        .listSync(recursive: true)
+        .whereType<File>()
+        .where((f) =>
+            f.path.endsWith('.dart') &&
+            f.path != appImagesFilePath &&
+            !tempExcludedPaths.any((exclude) => f.path.contains(exclude)))
+        .toList();
+
+    for (var file in dartFiles) {
+      final content = file.readAsStringSync();
+      for (var constName in imageConstants.keys) {
+        if (content.contains('AppImages.$constName')) {
+          usedConstants.add(constName);
+        }
+      }
+    }
+
+    final unusedConstants = imageConstants.keys
+        .where((constName) => !usedConstants.contains(constName))
+        .toSet();
+
+    if (unusedConstants.isEmpty) {
+      print('✅ all images are used');
+      return;
+    }
+
+    print('🚧 start processing unused resources...');
+    final appImagesFile = File(appImagesFilePath);
+    final lines = appImagesFile.readAsLinesSync();
+    final updatedLines = <String>[];
+
+    for (var line in lines) {
+      final trimmed = line.trim();
+      final match =
+          RegExp(r'static const (\w+)\s*=\s*"[^"]+";').firstMatch(trimmed);
+      if (match != null) {
+        final constName = match.group(1)!;
+        if (unusedConstants.contains(constName)) {
+          switch (unusedAssetsHandling) {
+            case UnusedAssetsHandling.annotation:
+              if (!line.trimLeft().startsWith('//')) {
+                print('📝 annotation resources: $constName');
+                updatedLines.add('// $line');
+              } else {
+                updatedLines.add(line);
+              }
+              break;
+
+            case UnusedAssetsHandling.moveToUnusedFolder:
+              // 处理图片资源
+              final assetPath = imageConstants[constName]!;
+              final file = File(assetPath);
+              if (file.existsSync()) {
+                try {
+                  final fileName = assetPath.split('/').last;
+                  final targetPath = '$imagePath/$unusedAssetsPath/$fileName';
+                  file.renameSync(targetPath);
+                  print('📦 moved to $targetPath');
+                } catch (e) {
+                  print('⚠️ moved failed: $assetPath\n$e');
+                }
+              }
+              break;
+
+            case UnusedAssetsHandling.delete:
+              // 处理图片资源
+              final assetPath = imageConstants[constName]!;
+              final file = File(assetPath);
+              if (file.existsSync()) {
+                try {
+                  file.deleteSync();
+                  print('🗑️ delete resources: $assetPath');
+                } catch (e) {
+                  print('⚠️ delete failed: $assetPath\n$e');
+                }
+              }
+              break;
+          }
+        } else {
+          updatedLines.add(line);
+        }
+      } else {
+        updatedLines.add(line);
+      }
+    }
+
+    appImagesFile.writeAsStringSync(updatedLines.join('\n'));
+    print(
+        '✅ check unused finish， ${unusedConstants.length} resources not referenced');
+  }
+
   static String convertToCamelCase(String input) {
     if (input.contains(" ")) input = input.replaceAll(" ", "_");
     if (input.contains("-")) input = input.replaceAll("-", "_");

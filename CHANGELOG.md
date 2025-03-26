@@ -1,10 +1,17 @@
+## 0.0.5
+
+* TODO: Add monitoring of invalid resources
+
+
 ## 0.0.4
 
-* TODO:  修复目录中的隐藏文件导致执行异常
+* TODO:  Fix hidden files in the directory causing execution exceptions
+
 
 ## 0.0.3
 
-* TODO:  支持资源名称排序
+* TODO:  Support sorting of resource names
+
 
 ## 0.0.2
 
