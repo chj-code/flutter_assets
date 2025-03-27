@@ -4,11 +4,14 @@ import 'package:flutter_assets/flutter_assets.dart';
 void main() {
   /// Refresh Assets
   test('RefreshAssets', () async {
-    await FlutterAssets.refresh(generateUnused: true);
+    await FlutterAssets.generate(generateUnused: true);
   });
 
   /// Check Unused Assets
   test('CheckUnusedAssets', () async {
-    await FlutterAssets.checkUnused();
+    await FlutterAssets.checkUnused(
+      excludedNamePrefix: ['iconArrow'],
+      excludedFileSuffix: ['txt'],
+    );
   });
 }

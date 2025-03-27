@@ -3,6 +3,9 @@ library flutter_assets;
 import 'dart:io';
 
 enum UnusedAssetsHandling {
+  /// only print unused resources
+  log,
+
   /// annotate unused resources code
   annotation,
 
@@ -21,6 +24,7 @@ class FlutterAssets {
   static const String dividerStr =
       "\n--------------------------------------------------------------------------------------------\n\n";
   static const String unusedAssetsPath = "unused";
+  static const int maxLineLength = 300;
 
   ///
   /// projectPath: Default auto read project root path
@@ -33,19 +37,16 @@ class FlutterAssets {
   ///
   /// className: Generated class name， Default use：AppImages
   ///
-  /// maxLineLength: Maximum length displayed in a single line of code， Default：200
-  ///
   /// sortByLength: Sort by name length defaults to false, sort by letter
   ///
   /// generateUnused: Generate unused resources, default false
   ///
-  static refresh({
+  static generate({
     String projectPath = "",
     String imagePath = "assets/images",
     String codePath = "lib/app_res",
     String codeName = "app_image",
     String className = "AppImages",
-    int maxLineLength = 200,
     bool sortByLength = false,
     bool generateUnused = false,
   }) async {
@@ -56,7 +57,7 @@ class FlutterAssets {
     String resPath = "$projectPath/$codePath/$codeName.dart";
 
     print(
-        "🔥 assets path info：\n  - ClassName: $className \n  - ImagePath: $imageUri \n  - CodePath:  $resPath \n$dividerStr");
+        "🔥 generate assets path info：\n  - ClassName: $className \n  - ImagePath: $imageUri \n  - CodePath:  $resPath \n$dividerStr");
 
     // Directory
     Directory projectDir = Directory(imageUri);
@@ -200,7 +201,8 @@ class FlutterAssets {
         print(dividerStr);
       }
     }
-    print('✅✅ refresh success ✅✅\n\n------------- end -------------');
+    print(
+        '✅✅ generate and refresh success ✅✅\n\n------------- end -------------');
   }
 
   ///
@@ -216,6 +218,20 @@ class FlutterAssets {
   ///
   /// excludedPaths: To exclude unprocessed file paths (relative to the project root directory)  Default use：[]
   ///
+  /// excludedNamePrefix：To exclude the prefix of the file name (The name prefix must be use FlutterAssets.generated())  Default use：[]
+  /// ```dart
+  ///  // sample
+  ///  await FlutterAssets.checkUnused(excludedNamePrefix: ['iconArrow']);
+  /// ```
+  ///
+  /// excludedFileSuffix：To exclude the suffix of the file  Default use：[]
+  /// ```dart
+  ///  // sample
+  ///  await FlutterAssets.checkUnused(excludedFileSuffix: ['txt']);
+  /// ```
+  ///
+  /// unusedAssetsHandling: Unused resources processing method  Default use：log
+  ///
   static checkUnused({
     String projectPath = "",
     String imagePath = "assets/images",
@@ -223,8 +239,13 @@ class FlutterAssets {
     String codeName = "app_image",
     String className = "AppImages",
     List<String> excludedPaths = const [],
-    UnusedAssetsHandling unusedAssetsHandling = UnusedAssetsHandling.annotation,
+    List<String> excludedNamePrefix = const [],
+    List<String> excludedFileSuffix = const [],
+    UnusedAssetsHandling unusedAssetsHandling = UnusedAssetsHandling.log,
   }) async {
+    print(
+        '\n\n🔥 check unused resources \n\n------------- start -------------\n\n');
+
     /// 从文件中提取 AppImages 常量
     Map<String, String> extractAppImagesConstants(String filePath) {
       final file = File(filePath);
@@ -303,8 +324,27 @@ class FlutterAssets {
           RegExp(r'static const (\w+)\s*=\s*"[^"]+";').firstMatch(trimmed);
       if (match != null) {
         final constName = match.group(1)!;
+        if (excludedNamePrefix.isNotEmpty &&
+            excludedNamePrefix
+                .any((element) => constName.startsWith(element))) {
+          updatedLines.add(line);
+          continue;
+        }
+
+        if (excludedFileSuffix.isNotEmpty &&
+            excludedFileSuffix
+                .any((element) => trimmed.endsWith('$element";'))) {
+          updatedLines.add(line);
+          continue;
+        }
+
         if (unusedConstants.contains(constName)) {
           switch (unusedAssetsHandling) {
+            case UnusedAssetsHandling.log:
+              updatedLines.add(line);
+              print('⚠️ unused assets:$line');
+              break;
+
             case UnusedAssetsHandling.annotation:
               if (!line.trimLeft().startsWith('//')) {
                 print('📝 annotation resources: $constName');
@@ -317,6 +357,9 @@ class FlutterAssets {
             case UnusedAssetsHandling.moveToUnusedFolder:
               // 处理图片资源
               final assetPath = imageConstants[constName]!;
+              if (assetPath.startsWith("$imagePath/$unusedAssetsPath")) {
+                continue;
+              }
               final file = File(assetPath);
               if (file.existsSync()) {
                 try {
@@ -353,8 +396,7 @@ class FlutterAssets {
     }
 
     appImagesFile.writeAsStringSync(updatedLines.join('\n'));
-    print(
-        '✅ check unused finish， ${unusedConstants.length} resources not referenced');
+    print('✅✅ check unused finish ✅✅\n\n------------- end -------------');
   }
 
   static String convertToCamelCase(String input) {

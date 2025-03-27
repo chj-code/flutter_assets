@@ -1,6 +1,6 @@
 name: flutter_assets
 description: "Help you quickly generate resource files or detect invalid resource references in the project."
-version: 0.0.5
+version: 0.0.6
 homepage: https://github.com/chj-code/flutter_assets
 
 environment:
